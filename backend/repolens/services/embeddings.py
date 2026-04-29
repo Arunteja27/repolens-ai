@@ -6,14 +6,13 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 import httpx
 
 from repolens.models import ChunkRecord
 from repolens.services.storage import MetadataStore
-
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_./-]*")
 
@@ -186,12 +185,13 @@ class EmbeddingService:
             self.store.store_embeddings(
                 provider=self.provider.provider_name,
                 vectors=missing_vectors,
-                updated_at=datetime.now(timezone.utc).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
             )
 
         all_vectors = {**cached, **missing_vectors}
         hydrated_chunks = [
-            chunk.model_copy(update={"embedding": all_vectors.get(chunk.chunk_hash)}) for chunk in chunks
+            chunk.model_copy(update={"embedding": all_vectors.get(chunk.chunk_hash)})
+            for chunk in chunks
         ]
         duration_ms = int((time.perf_counter() - started_at) * 1000)
         return EmbeddingBatchResult(
@@ -210,4 +210,3 @@ def estimate_embedding_cost(text_count: int) -> float | None:
     if not rate:
         return None
     return float(rate) * (text_count / 1000)
-

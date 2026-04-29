@@ -50,4 +50,7 @@ def test_end_to_end_fixture_index_and_query(tmp_path: Path) -> None:
     )
 
     assert response.citations
-    assert any(citation.file_path == "src/retrieval/hybridRetriever.ts" for citation in response.citations)
+    assert any(
+        citation.file_path == "src/retrieval/hybridRetriever.ts"
+        for citation in response.citations
+    )

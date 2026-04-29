@@ -5,10 +5,8 @@ import time
 
 from repolens.core.logging import get_logger, log_event
 from repolens.models import AnswerResponse, RetrievalMode
-from repolens.services.answering import GeneratedAnswer
 from repolens.services.retrieval import RetrievalService
 from repolens.services.storage import MetadataStore
-
 
 logger = get_logger(__name__)
 

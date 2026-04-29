@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 from repolens.models import ChunkRecord, EvalSummary, RepoRecord
 
@@ -83,7 +83,14 @@ class MetadataStore:
             connection.execute(
                 """
                 INSERT INTO repos (
-                    repo_id, repo_url, branch, commit_sha, indexed_at, files_indexed, chunks_indexed, metadata_json
+                    repo_id,
+                    repo_url,
+                    branch,
+                    commit_sha,
+                    indexed_at,
+                    files_indexed,
+                    chunks_indexed,
+                    metadata_json
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(repo_id) DO UPDATE SET
                     repo_url=excluded.repo_url,
@@ -172,13 +179,16 @@ class MetadataStore:
             return {}
         placeholders = ", ".join(["?"] * len(chunk_hashes))
         query = (
-            f"SELECT chunk_hash, vector_json FROM embeddings WHERE provider = ? AND chunk_hash IN ({placeholders})"
+            "SELECT chunk_hash, vector_json FROM embeddings "
+            f"WHERE provider = ? AND chunk_hash IN ({placeholders})"
         )
         with self._connect() as connection:
             rows = connection.execute(query, (provider, *chunk_hashes)).fetchall()
         return {row["chunk_hash"]: json.loads(row["vector_json"]) for row in rows}
 
-    def store_embeddings(self, provider: str, vectors: dict[str, list[float]], updated_at: str) -> None:
+    def store_embeddings(
+        self, provider: str, vectors: dict[str, list[float]], updated_at: str
+    ) -> None:
         if not vectors:
             return
         with self._connect() as connection:
@@ -244,4 +254,3 @@ class MetadataStore:
                 "created_at": row["created_at"],
             }
         )
-

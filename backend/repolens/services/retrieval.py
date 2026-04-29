@@ -8,11 +8,10 @@ from dataclasses import dataclass
 from statistics import mean
 from typing import Protocol
 
-from repolens.models import ChunkRecord, RetrievedChunk, RetrievalMode
+from repolens.models import ChunkRecord, RetrievalMode, RetrievedChunk
 from repolens.services.embeddings import EmbeddingService
 from repolens.services.storage import MetadataStore
 from repolens.services.vector_store import VectorStore
-
 
 try:
     from rank_bm25 import BM25Okapi
@@ -36,12 +35,16 @@ class RetrievalResult:
 
 
 class Reranker(Protocol):
-    def rerank(self, question: str, chunks: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
+    def rerank(
+        self, question: str, chunks: list[RetrievedChunk], top_k: int
+    ) -> list[RetrievedChunk]:
         ...
 
 
 class HeuristicReranker:
-    def rerank(self, question: str, chunks: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
+    def rerank(
+        self, question: str, chunks: list[RetrievedChunk], top_k: int
+    ) -> list[RetrievedChunk]:
         question_tokens = set(tokenize(question))
         reranked: list[RetrievedChunk] = []
         for chunk in chunks:
@@ -70,13 +73,20 @@ class CrossEncoderReranker:
             self._model = CrossEncoder(self.model_name)
         return self._model
 
-    def rerank(self, question: str, chunks: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
+    def rerank(
+        self, question: str, chunks: list[RetrievedChunk], top_k: int
+    ) -> list[RetrievedChunk]:
         if not chunks:
             return []
         model = self._load()
         scores = model.predict([(question, chunk.chunk_text) for chunk in chunks])
         scored_chunks = [
-            chunk.model_copy(update={"score": float(score), "source": f"{chunk.source}+cross-encoder"})
+            chunk.model_copy(
+                update={
+                    "score": float(score),
+                    "source": f"{chunk.source}+cross-encoder",
+                }
+            )
             for chunk, score in zip(chunks, scores, strict=True)
         ]
         return sorted(scored_chunks, key=lambda item: item.score, reverse=True)[:top_k]
@@ -157,7 +167,10 @@ class RetrievalService:
         elif mode == "bm25":
             merged = bm25_results[:top_k]
         else:
-            merged = self._hybrid_fuse(vector_results=vector_results, bm25_results=bm25_results)[:top_k]
+            merged = self._hybrid_fuse(
+                vector_results=vector_results,
+                bm25_results=bm25_results,
+            )[:top_k]
 
         if self.reranker is not None and merged:
             started_at = time.perf_counter()
@@ -176,15 +189,26 @@ class RetrievalService:
         if not chunks:
             return []
         tokenized_corpus = [
-            tokenize(f"{chunk.file_path} {chunk.symbol_name or ''} {chunk.chunk_text}") for chunk in chunks
+            tokenize(
+                f"{chunk.file_path} {chunk.symbol_name or ''} {chunk.chunk_text}"
+            )
+            for chunk in chunks
         ]
         query_tokens = tokenize(question)
         if BM25Okapi is not None:
             scores = list(BM25Okapi(tokenized_corpus).get_scores(query_tokens))
         else:
             scores = SimpleBM25(tokenized_corpus).get_scores(query_tokens)
-        ranked = sorted(zip(scores, chunks, strict=True), key=lambda item: item[0], reverse=True)[:top_k]
-        return [self._to_retrieved_chunk(chunk, score, source="bm25") for score, chunk in ranked if score > 0]
+        ranked = sorted(
+            zip(scores, chunks, strict=True),
+            key=lambda item: item[0],
+            reverse=True,
+        )[:top_k]
+        return [
+            self._to_retrieved_chunk(chunk, score, source="bm25")
+            for score, chunk in ranked
+            if score > 0
+        ]
 
     def _hybrid_fuse(
         self, vector_results: list[RetrievedChunk], bm25_results: list[RetrievedChunk]

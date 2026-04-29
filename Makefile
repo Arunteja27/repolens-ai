@@ -4,13 +4,16 @@ PIP_FLAGS ?=
 
 .PHONY: venv setup dev test eval docker deploy-cloud-run-docs backend-install frontend-install backend-dev frontend-dev
 
-venv:
+.venv/bin/python:
 	python3 -m venv .venv
+
+venv: .venv/bin/python
 
 setup: backend-install frontend-install
 
-backend-install: venv
-	$(PYTHON) -m pip install $(PIP_FLAGS) -e 'backend[dev]'
+backend-install: .venv/bin/python
+	$(PYTHON) -m pip install $(PIP_FLAGS) setuptools wheel
+	$(PYTHON) -m pip install $(PIP_FLAGS) --no-build-isolation -e 'backend[dev]'
 
 frontend-install:
 	npm --prefix frontend install
@@ -19,6 +22,8 @@ dev:
 	docker compose up --build
 
 test: backend-install frontend-install
+	$(PYTHON) -m ruff check --config backend/pyproject.toml backend
+	$(PYTHON) -m mypy --config-file backend/pyproject.toml backend/repolens
 	PYTHONPATH=backend $(PYTHON) -m pytest backend/tests
 	npm --prefix frontend run lint
 	npm --prefix frontend run typecheck

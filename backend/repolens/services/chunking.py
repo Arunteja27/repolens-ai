@@ -4,7 +4,6 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-
 try:
     from tree_sitter_languages import get_parser
 except ImportError:  # pragma: no cover - optional dependency
@@ -102,7 +101,10 @@ class SlidingWindowChunker:
 
 class SymbolAwareChunker:
     def __init__(self, chunk_size_lines: int = 80, overlap_lines: int = 20) -> None:
-        self.sliding = SlidingWindowChunker(chunk_size_lines=chunk_size_lines, overlap_lines=overlap_lines)
+        self.sliding = SlidingWindowChunker(
+            chunk_size_lines=chunk_size_lines,
+            overlap_lines=overlap_lines,
+        )
 
     def chunk_text(self, file_path: str, text: str, language: str) -> list[ChunkDraft]:
         if language == "python":
@@ -126,13 +128,19 @@ class SymbolAwareChunker:
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 continue
-            if getattr(node, "end_lineno", None) is None:
+            end_line = node.end_lineno
+            if end_line is None:
                 continue
             symbol_type = "class" if isinstance(node, ast.ClassDef) else "function"
-            symbols.append((node.lineno, node.end_lineno, getattr(node, "name", None), symbol_type))
+            symbols.append((node.lineno, end_line, node.name, symbol_type))
 
         symbols.sort(key=lambda item: (item[0], item[1]))
-        return self._chunk_symbol_regions(file_path=file_path, lines=lines, language="python", symbols=symbols)
+        return self._chunk_symbol_regions(
+            file_path=file_path,
+            lines=lines,
+            language="python",
+            symbols=symbols,
+        )
 
     def _chunk_tree_sitter(self, file_path: str, text: str, language: str) -> list[ChunkDraft]:
         parser = get_parser(TREE_SITTER_LANGUAGE_MAP[language])
@@ -218,4 +226,3 @@ class SymbolAwareChunker:
 
 def infer_language(file_path: str) -> str:
     return Path(file_path).suffix.lstrip(".")
-

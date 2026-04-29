@@ -6,7 +6,6 @@ from pathlib import Path
 
 from repolens.core.config import Settings
 
-
 IGNORED_DIRECTORIES = {
     ".git",
     ".hg",

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from repolens.models import ChunkRecord, RepoRecord
@@ -13,7 +13,7 @@ def test_retrieval_returns_expected_shape(tmp_path: Path) -> None:
     repo = RepoRecord(
         repo_id="repo-1",
         repo_url="https://example.com/repo",
-        indexed_at=datetime.now(timezone.utc),
+        indexed_at=datetime.now(UTC),
         files_indexed=2,
         chunks_indexed=2,
     )
@@ -55,6 +55,6 @@ def _chunk(chunk_id: str, file_path: str, text: str) -> ChunkRecord:
         end_line=3,
         chunk_text=text,
         chunk_hash=str(hash(text)),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 

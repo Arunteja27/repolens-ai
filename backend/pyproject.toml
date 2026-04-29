@@ -64,3 +64,16 @@ warn_unused_ignores = true
 strict_optional = true
 namespace_packages = true
 explicit_package_bases = true
+mypy_path = ["backend"]
+
+[[tool.mypy.overrides]]
+module = [
+  "chromadb",
+  "google",
+  "google.auth",
+  "google.auth.transport.requests",
+  "rank_bm25",
+  "sentence_transformers",
+  "tree_sitter_languages",
+]
+ignore_missing_imports = true

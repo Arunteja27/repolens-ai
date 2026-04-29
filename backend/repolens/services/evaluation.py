@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from statistics import mean
 from uuid import uuid4
@@ -81,7 +81,7 @@ class EvaluationService:
         summary = EvalSummary(
             eval_id=f"eval-{uuid4().hex[:10]}",
             repo_id=repo_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             total_queries=total_queries,
             retrieval_recall_at_3=mean(
                 [1.0 if result.retrieval_hit_at_3 else 0.0 for result in results]
@@ -167,7 +167,13 @@ class EvaluationService:
         if not values:
             return 0.0
         sorted_values = sorted(values)
-        index = max(0, min(len(sorted_values) - 1, round((percentile / 100) * (len(sorted_values) - 1))))
+        index = max(
+            0,
+            min(
+                len(sorted_values) - 1,
+                round((percentile / 100) * (len(sorted_values) - 1)),
+            ),
+        )
         return float(sorted_values[index])
 
 

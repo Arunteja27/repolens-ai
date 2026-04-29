@@ -60,7 +60,11 @@ class InMemoryVectorStore:
         return [self._to_retrieved_chunk(chunk, score, source="vector") for score, chunk in ranked]
 
     def delete_repo(self, repo_id: str) -> None:
-        doomed_ids = [chunk_id for chunk_id, chunk in self._chunks.items() if chunk.repo_id == repo_id]
+        doomed_ids = [
+            chunk_id
+            for chunk_id, chunk in self._chunks.items()
+            if chunk.repo_id == repo_id
+        ]
         for chunk_id in doomed_ids:
             del self._chunks[chunk_id]
 
@@ -158,4 +162,3 @@ class ChromaVectorStore:
             "symbol_name": chunk.symbol_name or "",
             "symbol_type": chunk.symbol_type or "",
         }
-

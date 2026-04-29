@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from repolens.models import ChunkRecord
@@ -46,6 +46,6 @@ def _chunk(chunk_id: str, text: str) -> ChunkRecord:
         end_line=3,
         chunk_text=text,
         chunk_hash=str(hash(text)),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 

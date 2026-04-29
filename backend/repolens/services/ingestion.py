@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from repolens.core.logging import get_logger, log_event
@@ -17,7 +17,6 @@ from repolens.services.embeddings import EmbeddingService
 from repolens.services.filtering import FileFilter
 from repolens.services.storage import MetadataStore
 from repolens.services.vector_store import VectorStore
-
 
 logger = get_logger(__name__)
 
@@ -46,7 +45,12 @@ class RepositoryCloner:
         target = Path(tempfile.mkdtemp(dir=self.temp_repo_dir))
         shutil.copytree(source, target, dirs_exist_ok=True)
         commit_sha = self._resolve_commit_sha(source)
-        return PreparedRepository(repo_path=target, repo_url=repo_url, branch=branch, commit_sha=commit_sha)
+        return PreparedRepository(
+            repo_path=target,
+            repo_url=repo_url,
+            branch=branch,
+            commit_sha=commit_sha,
+        )
 
     def _clone_remote_repo(self, repo_url: str, branch: str | None) -> PreparedRepository:
         target = Path(tempfile.mkdtemp(dir=self.temp_repo_dir))
@@ -56,7 +60,12 @@ class RepositoryCloner:
         command.extend([repo_url, str(target)])
         subprocess.run(command, check=True, capture_output=True, text=True)
         commit_sha = self._resolve_commit_sha(target)
-        return PreparedRepository(repo_path=target, repo_url=repo_url, branch=branch, commit_sha=commit_sha)
+        return PreparedRepository(
+            repo_path=target,
+            repo_url=repo_url,
+            branch=branch,
+            commit_sha=commit_sha,
+        )
 
     @staticmethod
     def _resolve_commit_sha(repo_path: Path) -> str | None:
@@ -75,7 +84,11 @@ class RepositoryCloner:
 
     @staticmethod
     def _is_local_source(repo_url: str) -> bool:
-        return repo_url.startswith("file://") or repo_url.startswith("/") or repo_url.startswith(".")
+        return (
+            repo_url.startswith("file://")
+            or repo_url.startswith("/")
+            or repo_url.startswith(".")
+        )
 
 
 class IngestionService:
@@ -123,7 +136,7 @@ class IngestionService:
                 repo_url=repo_url,
                 branch=branch,
                 commit_sha=prepared.commit_sha,
-                indexed_at=datetime.now(timezone.utc),
+                indexed_at=datetime.now(UTC),
                 files_indexed=len(source_files),
                 chunks_indexed=len(embedded.chunks),
                 metadata={
@@ -163,7 +176,7 @@ class IngestionService:
         source_files: list,
     ) -> list[ChunkRecord]:
         records: list[ChunkRecord] = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for source_file in source_files:
             text = source_file.absolute_path.read_text(encoding="utf-8", errors="ignore")
             chunk_drafts = self.chunker.chunk_text(
@@ -203,6 +216,5 @@ class IngestionService:
 def build_repo_id(repo_url: str, branch: str | None) -> str:
     slug_source = repo_url.removeprefix("https://").removeprefix("http://").rstrip("/")
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", slug_source).strip("-").lower()
-    digest = hashlib.sha1(f"{repo_url}|{branch or 'default'}".encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha1(f"{repo_url}|{branch or 'default'}".encode()).hexdigest()[:8]
     return f"{slug[:32]}-{digest}"
-

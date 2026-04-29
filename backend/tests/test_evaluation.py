@@ -11,7 +11,10 @@ class FakeQueryService:
         del repo_id, retrieval_mode, top_k, request_id
         if "latency" in question.lower():
             file_path = "src/middleware/requestLogger.ts"
-            answer = "Based on the indexed repo, src/middleware/requestLogger.ts:1-3 -> logs request latency."
+            answer = (
+                "Based on the indexed repo, "
+                "src/middleware/requestLogger.ts:1-3 -> logs request latency."
+            )
         else:
             file_path = "src/server.ts"
             answer = "Based on the indexed repo, src/server.ts:1-3 -> Bootstraps the HTTP server."

@@ -75,7 +75,7 @@ class Settings:
     )
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         root_dir = Path(__file__).resolve().parents[3]
         data_dir = root_dir / ".data"
         temp_repo_dir = data_dir / "repos"

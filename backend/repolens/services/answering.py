@@ -11,7 +11,6 @@ import httpx
 from repolens.core.config import Settings
 from repolens.models import Citation, RetrievedChunk, TokenUsage
 
-
 JSON_BLOCK_PATTERN = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 
 
@@ -73,10 +72,7 @@ class ExtractiveAnswerGenerator:
     @staticmethod
     def _summarize_chunk(chunk_text: str) -> str:
         lines = [line.strip() for line in chunk_text.splitlines() if line.strip()]
-        if len(lines) <= 8:
-            preview = " ".join(lines)
-        else:
-            preview = " ".join(lines[:4])
+        preview = " ".join(lines) if len(lines) <= 8 else " ".join(lines[:4])
         if not preview:
             preview = "Relevant code chunk"
         return preview[:220]
@@ -194,7 +190,8 @@ class GeminiAnswerGenerator:
             )
         instructions = (
             "You are RepoLens AI. Answer only from the retrieved repository context.\n"
-            'If the context is insufficient, answer exactly: "I don\'t know from the indexed repo."\n'
+            'If the context is insufficient, answer exactly: "I don\'t know from the '
+            'indexed repo."\n'
             "Return strict JSON with this shape:\n"
             '{"answer": "...", "citations": ["C1", "C2"]}\n'
             "Do not invent files, line numbers, or APIs.\n"
@@ -208,14 +205,22 @@ class GeminiAnswerGenerator:
     def _parse_json_response(self, payload: dict) -> dict:
         text = self._extract_text(payload)
         if not text:
-            return {"answer": "I don't know from the indexed repo.", "citations": [], "_usage": payload}
+            return {
+                "answer": "I don't know from the indexed repo.",
+                "citations": [],
+                "_usage": payload,
+            }
         try:
             return {**json.loads(text), "_usage": payload}
         except json.JSONDecodeError:
             fenced = JSON_BLOCK_PATTERN.search(text)
             if fenced:
                 return {**json.loads(fenced.group(1)), "_usage": payload}
-        return {"answer": "I don't know from the indexed repo.", "citations": [], "_usage": payload}
+        return {
+            "answer": "I don't know from the indexed repo.",
+            "citations": [],
+            "_usage": payload,
+        }
 
     @staticmethod
     def _extract_text(payload: dict) -> str:

@@ -15,7 +15,6 @@ from repolens.models import (
     RepoRecord,
 )
 
-
 router = APIRouter()
 
 

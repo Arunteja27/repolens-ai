@@ -14,7 +14,6 @@ from repolens.container import build_context
 from repolens.core.config import Settings
 from repolens.core.logging import configure_logging, get_logger, log_event
 
-
 logger = get_logger(__name__)
 
 
