@@ -7,12 +7,13 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
 from repolens.api.routes import router as api_router
 from repolens.container import build_context
 from repolens.core.config import Settings
 from repolens.core.logging import configure_logging, get_logger, log_event
+from repolens.core.rate_limit import RateLimitDecision
 
 logger = get_logger(__name__)
 
@@ -42,13 +43,60 @@ def create_app() -> FastAPI:
         request_id = request.headers.get("X-Request-ID", uuid4().hex)
         request.state.request_id = request_id
         started_at = time.perf_counter()
+        context = request.app.state.context
+        rate_limit_decision = _check_rate_limit(request)
+
+        if rate_limit_decision is not None and rate_limit_decision.retry_after_seconds > 0:
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Try again later."},
+            )
+            _apply_rate_limit_headers(response, rate_limit_decision)
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            response.headers["X-Request-ID"] = request_id
+            context.metrics.increment(
+                "rate_limit_rejections_total",
+                labels={
+                    "path": request.url.path,
+                    "policy": rate_limit_decision.policy_name,
+                },
+            )
+            context.metrics.increment(
+                "http_requests_total",
+                labels={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": "429",
+                },
+            )
+            context.metrics.observe(
+                "http_request_latency_ms",
+                duration_ms,
+                labels={"method": request.method, "path": request.url.path},
+            )
+            log_event(
+                logger,
+                logging.WARNING,
+                "http_rate_limited",
+                request_id=request_id,
+                method=request.method,
+                path=request.url.path,
+                status_code=429,
+                latency_ms=duration_ms,
+                rate_limit_policy=rate_limit_decision.policy_name,
+                retry_after_seconds=rate_limit_decision.retry_after_seconds,
+            )
+            return response
+
         try:
             response = await call_next(request)
         except Exception as exc:  # pragma: no cover - error path
             response = JSONResponse(status_code=500, content={"detail": str(exc)})
         duration_ms = int((time.perf_counter() - started_at) * 1000)
         response.headers["X-Request-ID"] = request_id
-        metrics = request.app.state.context.metrics
+        if rate_limit_decision is not None:
+            _apply_rate_limit_headers(response, rate_limit_decision)
+        metrics = context.metrics
         metrics.increment(
             "http_requests_total",
             labels={
@@ -93,3 +141,18 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+
+def _check_rate_limit(request: Request) -> RateLimitDecision | None:
+    context = request.app.state.context
+    if context.rate_limiter is None:
+        return None
+    return context.rate_limiter.check(request)
+
+
+def _apply_rate_limit_headers(response: Response, decision: RateLimitDecision) -> None:
+    response.headers["X-RateLimit-Limit"] = str(decision.limit)
+    response.headers["X-RateLimit-Remaining"] = str(decision.remaining)
+    response.headers["X-RateLimit-Policy"] = decision.policy_name
+    if decision.retry_after_seconds > 0:
+        response.headers["Retry-After"] = str(decision.retry_after_seconds)

@@ -159,4 +159,5 @@ It skips common generated or low-value paths such as `.git`, `node_modules`, `di
 ## Notes
 
 - Public GitHub repos are cloned into `.data/repos` during indexing and cleaned up after processing.
+- The cheap Cloud Run path is demo-grade: repo indexes live in `.data/` and are not durable across backend restarts.
 - Re-index a repo after changing chunking or retrieval behavior if you want the new indexing strategy to apply to stored chunks.

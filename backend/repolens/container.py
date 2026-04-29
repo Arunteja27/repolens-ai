@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from repolens.core.config import Settings
 from repolens.core.metrics import MetricsRegistry
+from repolens.core.rate_limit import InMemoryRateLimiter, RateLimitPolicy
 from repolens.services.answering import ExtractiveAnswerGenerator, GeminiAnswerGenerator
 from repolens.services.chunking import SlidingWindowChunker, SymbolAwareChunker
 from repolens.services.embeddings import (
@@ -25,6 +26,7 @@ from repolens.services.vector_store import ChromaVectorStore, InMemoryVectorStor
 class AppContext:
     settings: Settings
     metrics: MetricsRegistry
+    rate_limiter: InMemoryRateLimiter | None
     store: MetadataStore
     ingestion: IngestionService
     query: QueryService
@@ -34,6 +36,7 @@ class AppContext:
 def build_context(settings: Settings | None = None) -> AppContext:
     settings = settings or Settings.from_env()
     metrics = MetricsRegistry(namespace=settings.metrics_namespace)
+    rate_limiter = _build_rate_limiter(settings)
     store = MetadataStore(settings.database_path)
     embedder = EmbeddingService(store=store, provider=_build_embedding_provider(settings))
     vector_store = _build_vector_store(settings)
@@ -59,6 +62,7 @@ def build_context(settings: Settings | None = None) -> AppContext:
     return AppContext(
         settings=settings,
         metrics=metrics,
+        rate_limiter=rate_limiter,
         store=store,
         ingestion=ingestion,
         query=query,
@@ -115,3 +119,32 @@ def _build_chunker(settings: Settings):
         overlap_lines=settings.chunk_overlap_lines,
     )
 
+
+def _build_rate_limiter(settings: Settings) -> InMemoryRateLimiter | None:
+    if not settings.rate_limit_enabled:
+        return None
+    return InMemoryRateLimiter(
+        policies=[
+            RateLimitPolicy(
+                name="repo-index",
+                path="/api/repos/index",
+                method="POST",
+                limit=settings.rate_limit_index_requests,
+                window_seconds=settings.rate_limit_index_window_seconds,
+            ),
+            RateLimitPolicy(
+                name="query",
+                path="/api/query",
+                method="POST",
+                limit=settings.rate_limit_query_requests,
+                window_seconds=settings.rate_limit_query_window_seconds,
+            ),
+            RateLimitPolicy(
+                name="eval-run",
+                path="/api/evals/run",
+                method="POST",
+                limit=settings.rate_limit_eval_requests,
+                window_seconds=settings.rate_limit_eval_window_seconds,
+            ),
+        ]
+    )
