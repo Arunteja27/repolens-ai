@@ -1,324 +1,105 @@
 # RepoLens AI
 
-RepoLens AI is a full-stack codebase onboarding assistant. You point it at a public repository, it indexes the code, retrieves the most relevant chunks for a question, and answers with file and line citations so you can check where the answer came from.
+RepoLens AI is a full-stack repository Q&A assistant. It indexes a GitHub repo, chunks and stores code with line numbers, retrieves relevant context with hybrid search, and answers questions with grounded citations.
 
-This project is meant to show more than "I can call an LLM API." It demonstrates the moving parts of a production-style AI system: ingestion, chunking, embeddings, retrieval, evaluation, observability, and deployment packaging.
+## Features
 
-## Why this project matters
-
-When you join a new codebase, the hardest part is usually not writing code. It is finding the right files, understanding how modules fit together, and answering questions like:
-
-- Where is the entrypoint?
-- How does request logging work?
-- Which file builds the API response?
-- What config controls retrieval mode?
-
-RepoLens AI is built to answer those questions from the indexed repository itself, not from general model knowledge.
-
-## What it does
-
-Given a repo URL, RepoLens AI:
-
-1. clones the repository into a temporary workspace,
-2. filters out junk like `node_modules`, `.git`, build folders, large lockfiles, images, and binaries,
-3. chunks supported source files while preserving line numbers,
-4. stores chunk metadata and embeddings,
-5. retrieves relevant chunks with vector, BM25, or hybrid search,
-6. generates a grounded answer,
-7. returns the answer together with citations and debugging metadata.
-
-## Supported file types
-
-Current supported extensions:
-
-- `.py`
-- `.ts`
-- `.tsx`
-- `.js`
-- `.jsx`
-- `.java`
-- `.rb`
-- `.go`
-- `.cpp`
-- `.h`
-- `.md`
-- `.yml`
-- `.yaml`
-- `.json`
+- Index public GitHub repositories or local fixtures
+- Filter large, generated, and binary files before ingestion
+- Chunk code with sliding-window and symbol-aware strategies
+- Generate embeddings through a provider interface
+- Retrieve with vector, BM25, or hybrid search
+- Return answers with exact file and line citations
+- Run eval sets with Recall@K, MRR, groundedness, hallucination rate, latency, and cost tracking
+- Inspect results in a FastAPI backend and React frontend
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    A[Public GitHub repo URL] --> B[Repository clone / scan]
-    B --> C[File filtering]
-    C --> D[Chunking]
-    D --> E[Metadata store]
-    D --> F[Embedding provider]
-    F --> G[Vector store]
-    H[User question] --> I[Retriever]
-    G --> I
-    E --> I
-    I --> J[Grounded answer generator]
-    J --> K[Answer + citations + retrieved chunks + metrics]
-    K --> L[Eval harness / frontend / API clients]
+    A[GitHub repo URL] --> B[Clone + filter]
+    B --> C[Chunker]
+    C --> D[Metadata store]
+    C --> E[Embedding provider]
+    E --> F[Vector store]
+    G[User question] --> H[Retriever]
+    D --> H
+    F --> H
+    H --> I[Grounded answer generator]
+    I --> J[Answer + citations + retrieved chunks + metrics]
+    J --> K[Eval dashboard / API / UI]
 ```
 
-## Current stack
+## Stack
 
-Backend:
+- Backend: FastAPI, Pydantic, SQLite, optional ChromaDB, sentence-transformers, Gemini/Vertex hooks
+- Frontend: React, TypeScript, Vite
+- Retrieval: vector, BM25, hybrid, heuristic reranking
+- Ops: structured logs, request IDs, `/metrics`, Docker, GitHub Actions
 
-- Python 3.11+
-- FastAPI
-- Pydantic
-- SQLite metadata store
-- in-memory vector store by default
-- optional Chroma integration
-- optional sentence-transformers embeddings
-- optional Gemini / Vertex answer generation
-
-Frontend:
-
-- React
-- TypeScript
-- Vite
-- plain CSS with a developer-tool style UI
-
-Ops:
-
-- JSON structured logging
-- request IDs
-- `/metrics` endpoint
-- Dockerfiles
-- `docker-compose`
-- GitHub Actions CI
-
-## Project layout
+## Project Layout
 
 ```text
 backend/
   repolens/
-    api/        FastAPI routes
-    core/       config, logging, metrics
-    services/   ingestion, chunking, retrieval, answering, evals
-  tests/        backend tests
+    api/
+    core/
+    services/
+  tests/
 frontend/
-  src/          React app
-fixtures/
-  sample_repo/  tiny demo repository used for evals
+  src/
 evals/
-  sample_eval.json
-scripts/
-  run_sample_eval.py
+fixtures/
 docs/
-  deploy-cloud-run.md
 ```
 
-## No-cost mode vs paid mode
+## Quickstart
 
-### No-cost local mode
-
-The default local configuration is intentionally free:
-
-- `EMBEDDING_PROVIDER=hashing`
-- `VECTOR_STORE_PROVIDER=memory`
-- `ANSWER_PROVIDER=extractive`
-
-This means:
-
-- no Gemini API calls,
-- no Vertex AI calls,
-- no Cloud Run deployment charges,
-- no cloud dependency required to verify the core pipeline.
-
-### Paid / optional mode
-
-You only risk real usage charges if you explicitly switch to cloud-backed options such as:
-
-- `GEMINI_API_KEY` with Gemini answer generation,
-- `VERTEX_PROJECT_ID` with Vertex AI,
-- Cloud Run deployment,
-- Cloud Build / Artifact Registry usage.
-
-If you stay on the default config, local verification costs `$0`.
-
-## Secrets and security
-
-- Real secrets should never be committed to this repository.
-- `.env.example` contains placeholders only.
-- Use a local `.env` file or exported shell variables for secrets.
-- For deployment, use Secret Manager or platform-managed environment variables.
-- The API currently assumes public repositories and local development. If you deploy this publicly, add auth before exposing indexing endpoints.
-
-## Retrieval and answering modes
-
-Chunking:
-
-- sliding-window line chunking
-- symbol-aware chunking where possible
-
-Retrieval:
-
-- vector search
-- BM25 search
-- hybrid search
-
-Answer generation:
-
-- `extractive` mode: free, offline-friendly, summarizes retrieved chunks
-- `gemini` mode: optional cloud-backed answer generation
-
-## Evaluation results
-
-The project includes a sample fixture repository plus a 15-question eval set in `evals/sample_eval.json`.
-
-Latest local run on the free/offline path:
-
-| Metric | Result |
-| --- | ---: |
-| Retrieval recall@3 | 1.00 |
-| Retrieval recall@5 | 1.00 |
-| MRR | 0.867 |
-| Answer contains score | 1.00 |
-| Groundedness score | 1.00 |
-| Hallucination flags | 0 |
-| Failure rate | 0.00 |
-
-Latency and cost on that tiny fixture:
-
-| Scenario | Avg latency | Avg cost |
-| --- | ---: | ---: |
-| Free offline fixture eval | effectively 0 ms on the tiny demo repo | $0.00 |
-
-That latency number is not meant to be a serious production benchmark. The sample repo is intentionally tiny and exists only to verify the pipeline end to end.
-
-## How to run it locally
-
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/Arunteja27/repolens-ai.git
-cd repolens-ai
-```
-
-### 2. Create the local Python environment
+### 1. Install dependencies
 
 ```bash
 make setup
 ```
 
-If you prefer the manual route:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-.venv/bin/python -m pip install -e 'backend[dev]'
-npm --prefix frontend install
-```
-
-### 3. Run the tests
+### 2. Run the local verification suite
 
 ```bash
 make test
-```
-
-That runs:
-
-- backend tests,
-- frontend lint,
-- frontend typecheck,
-- frontend production build.
-
-### 4. Run the sample eval
-
-```bash
 make eval
 ```
 
-This indexes `fixtures/sample_repo`, runs the sample question set, and prints the evaluation summary.
-
-### 5. Start the backend
+### 3. Start the app
 
 ```bash
 make backend-dev
 ```
 
-Backend endpoints:
-
-- `GET /health`
-- `GET /metrics`
-- `POST /api/repos/index`
-- `POST /api/query`
-- `GET /api/repos/{repo_id}`
-- `POST /api/evals/run`
-- `GET /api/evals/{repo_id}`
-
-### 6. Start the frontend
-
-Open a second terminal in the repo and run:
+In a second terminal:
 
 ```bash
 make frontend-dev
 ```
 
-Then open:
+Open:
 
-- frontend: `http://localhost:5173`
-- backend: `http://localhost:8000`
-- backend health: `http://localhost:8000/health`
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8000`
+- Health: `http://localhost:8000/health`
+- Metrics: `http://localhost:8000/metrics`
 
-## Can I give it any public repo link?
+## Default Local Mode
 
-Mostly yes.
+The default setup is local and free:
 
-You can give it a public GitHub repo URL as long as:
+- `EMBEDDING_PROVIDER=hashing`
+- `VECTOR_STORE_PROVIDER=memory`
+- `ANSWER_PROVIDER=extractive`
 
-- `git clone` can access it,
-- the repo is not dominated by unsupported or binary file types,
-- the repo is not so large that local indexing becomes impractical on your machine.
+You only need Gemini or Vertex credentials if you explicitly switch to cloud-backed providers.
 
-Good examples:
+## API
 
-- a normal Python service
-- a React / TypeScript app
-- a medium-sized backend repo
-- an open-source project with docs and code mixed together
-
-Current limitations:
-
-- private repos are not handled in the current flow,
-- very large monorepos may be slow,
-- unsupported file types are skipped,
-- the default in-memory vector store is for local demo use, not long-term persistence.
-
-## Example verification flow
-
-If you want a fast manual demo after the servers are running:
-
-1. Open `http://localhost:5173`.
-2. Index a public repo.
-3. Wait for the repo page to load.
-4. Ask a question like:
-   - `Where is the main entrypoint?`
-   - `How does request logging work?`
-   - `Which file handles authentication?`
-5. Check that the answer includes:
-   - file paths,
-   - line ranges,
-   - retrieved chunks underneath the answer.
-6. Open the eval dashboard and run the sample eval set.
-
-## Sample questions
-
-- Where is the HTTP server bootstrapped?
-- Which file attaches request logging middleware?
-- Where are embeddings cached by chunk hash?
-- Which file combines vector similarity and BM25?
-- Where is the grounded answer prompt built?
-
-## API examples
-
-Index a repo:
+### Index a repository
 
 ```bash
 curl -X POST http://localhost:8000/api/repos/index \
@@ -326,48 +107,56 @@ curl -X POST http://localhost:8000/api/repos/index \
   -d '{"repo_url":"https://github.com/openai/openai-cookbook"}'
 ```
 
-Query a repo:
+### Query an indexed repository
 
 ```bash
 curl -X POST http://localhost:8000/api/query \
   -H "Content-Type: application/json" \
-  -d '{"repo_id":"REPO_ID_HERE","question":"Where is the main entrypoint?","retrieval_mode":"hybrid","top_k":6}'
+  -d '{"repo_id":"REPO_ID","question":"Where is the main entrypoint?","retrieval_mode":"hybrid","top_k":6}'
 ```
 
-## Docker and deployment
+## Evaluation
 
-Local Docker workflow:
+Eval sets live in `evals/` and can be run through the UI or CLI:
 
 ```bash
-make docker
-make dev
+python -m repolens.eval --repo-id <id> --eval-set evals/sample_eval.json
 ```
 
-Cloud Run notes live in:
+Included eval fixtures:
 
-- `docs/deploy-cloud-run.md`
+- `evals/sample_eval.json`
+- `evals/code_spa_readme_eval.json`
+- `evals/code_spa_impl_eval.json`
 
-Keep in mind:
+The evaluation dashboard reports:
 
-- the local free mode is what you should use to verify the project,
-- cloud deployment is optional,
-- cloud deployment can incur charges depending on the services you enable.
+- Recall@3 and Recall@5
+- MRR
+- Answer match score
+- Groundedness
+- Hallucination rate
+- Average and p95 latency
+- Average cost per query
+- Failure rate and failed items
 
-## Why this is resume-worthy
+## Supported Files
 
-This project demonstrates:
+RepoLens currently indexes:
 
-- AI retrieval system design,
-- code chunking and metadata preservation,
-- retrieval evaluation,
-- answer grounding and citations,
-- backend API design,
-- frontend product thinking,
-- cost-aware and security-aware engineering,
-- deployment packaging and CI.
+- `.py`, `.ts`, `.tsx`, `.js`, `.jsx`
+- `.java`, `.rb`, `.go`, `.cpp`, `.h`
+- `.md`, `.yml`, `.yaml`, `.json`
 
-## Resume bullet ideas
+It skips common generated or low-value paths such as `.git`, `node_modules`, `dist`, `build`, `target`, `.next`, `vendor`, binaries, images, and oversized files.
 
-- Built a full-stack repository Q&A assistant that indexes source code, retrieves relevant chunks with hybrid search, and answers with exact file and line citations.
-- Implemented a retrieval evaluation harness with recall@k, MRR, groundedness, hallucination flags, latency, and cost tracking.
-- Designed a FastAPI + React architecture with structured logging, metrics, Docker packaging, and CI for local and cloud deployment workflows.
+## Deployment
+
+- Local Docker workflow: `make docker`
+- Docker Compose: `docker-compose up --build`
+- Cloud Run notes: [docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)
+
+## Notes
+
+- Public GitHub repos are cloned into `.data/repos` during indexing and cleaned up after processing.
+- Re-index a repo after changing chunking or retrieval behavior if you want the new indexing strategy to apply to stored chunks.
