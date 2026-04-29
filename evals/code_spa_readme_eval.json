@@ -1,0 +1,46 @@
+[
+  {
+    "question": "What are the two main features highlighted in the README?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": ["Smart Dynamic Backgrounds", "Spotify Integration"],
+    "must_not_contain": ["GitHub Actions"]
+  },
+  {
+    "question": "What does the README say about the dynamic backgrounds?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": [
+      "AI analyzes your project",
+      "Changes automatically as you switch between files",
+      "Adjustable transparency"
+    ],
+    "must_not_contain": ["database"]
+  },
+  {
+    "question": "What does the README say about the Spotify integration?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": [
+      "Spotify Premium account",
+      "liked songs, playlists, and recent tracks",
+      "Full music controls right in VS Code"
+    ],
+    "must_not_contain": ["OAuth callback server"]
+  },
+  {
+    "question": "What license is listed for code-spa?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": ["All Rights Reserved"],
+    "must_not_contain": ["MIT License"]
+  },
+  {
+    "question": "Where can users report issues or ask for new features?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": ["Report Issues", "Feature Requests"],
+    "must_not_contain": ["Jira"]
+  },
+  {
+    "question": "Where is the VS Code extension activation function implemented?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": ["I don't know from the indexed repo."],
+    "must_not_contain": ["src/extension.ts"]
+  }
+]
