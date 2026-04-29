@@ -87,6 +87,10 @@ Open:
 - Health: `http://localhost:8000/health`
 - Metrics: `http://localhost:8000/metrics`
 
+Question examples and prompt patterns:
+
+- [docs/example-questions.md](docs/example-questions.md)
+
 ## Default Local Mode
 
 The default setup is local and free:
