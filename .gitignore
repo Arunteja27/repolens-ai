@@ -1,6 +1,7 @@
 .DS_Store
 .env
 .env.local
+.env.*
 .venv
 .pytest_cache
 .mypy_cache
@@ -18,4 +19,4 @@ htmlcov
 .data
 backend/.data
 tmp
-
+!.env.example
