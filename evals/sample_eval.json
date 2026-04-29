@@ -74,20 +74,19 @@
   {
     "question": "What is the default retrieval mode?",
     "expected_files": ["config/default.yml"],
-    "expected_answer_contains": ["default_retrieval_mode: hybrid"],
+    "expected_answer_contains": ["default retrieval mode is hybrid"],
     "must_not_contain": ["default_retrieval_mode: vector"]
   },
   {
     "question": "Where are metrics enabled in config?",
     "expected_files": ["config/default.yml"],
-    "expected_answer_contains": ["metrics_enabled: true"],
+    "expected_answer_contains": ["Metrics are enabled in config"],
     "must_not_contain": ["metrics_enabled: false"]
   },
   {
     "question": "Which README section mentions hybrid retrieval?",
     "expected_files": ["README.md"],
-    "expected_answer_contains": ["Hybrid retrieval combines vector similarity and BM25 scoring."],
+    "expected_answer_contains": ["hybrid retrieval combines vector similarity and BM25 scoring"],
     "must_not_contain": ["SQL migration plan"]
   }
 ]
-

@@ -175,7 +175,9 @@ class RetrievalService:
         chunks = self.store.list_chunks(repo_id)
         if not chunks:
             return []
-        tokenized_corpus = [tokenize(chunk.chunk_text) for chunk in chunks]
+        tokenized_corpus = [
+            tokenize(f"{chunk.file_path} {chunk.symbol_name or ''} {chunk.chunk_text}") for chunk in chunks
+        ]
         query_tokens = tokenize(question)
         if BM25Okapi is not None:
             scores = list(BM25Okapi(tokenized_corpus).get_scores(query_tokens))
@@ -217,4 +219,3 @@ class RetrievalService:
                 "source": source,
             }
         )
-

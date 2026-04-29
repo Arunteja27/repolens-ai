@@ -73,7 +73,12 @@ class ExtractiveAnswerGenerator:
     @staticmethod
     def _summarize_chunk(chunk_text: str) -> str:
         lines = [line.strip() for line in chunk_text.splitlines() if line.strip()]
-        preview = " ".join(lines[:2]) if lines else "Relevant code chunk"
+        if len(lines) <= 8:
+            preview = " ".join(lines)
+        else:
+            preview = " ".join(lines[:4])
+        if not preview:
+            preview = "Relevant code chunk"
         return preview[:220]
 
 
@@ -252,4 +257,3 @@ class GeminiAnswerGenerator:
             + ((token_usage.output_tokens or 0) / 1_000_000) * float(output_rate),
             6,
         )
-

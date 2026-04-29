@@ -10,8 +10,10 @@ __pycache__
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
 *.sqlite3
 *.db
+*.tsbuildinfo
 node_modules
 frontend/dist
 coverage
