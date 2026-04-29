@@ -94,6 +94,8 @@ gcloud builds submit \
   --substitutions=_IMAGE_URI=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/repolens/repolens-backend .
 ```
 
+This personal deployment builds the backend with the base dependency set only. That keeps the image smaller, avoids optional parser/provider issues, and is enough for the cheap `hashing + memory + extractive` mode.
+
 Deploy the backend:
 
 ```bash

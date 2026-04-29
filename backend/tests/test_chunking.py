@@ -45,3 +45,27 @@ export class ControlPanelProvider {
     provider_chunk = next(chunk for chunk in chunks if chunk.symbol_name == "ControlPanelProvider")
     assert provider_chunk.symbol_type == "class"
     assert (provider_chunk.start_line, provider_chunk.end_line) == (1, 5)
+
+
+def test_symbol_aware_typescript_chunker_falls_back_when_tree_sitter_parser_breaks(
+    monkeypatch,
+) -> None:
+    chunker = SymbolAwareChunker(chunk_size_lines=20, overlap_lines=5)
+    text = """\
+export class ControlPanelProvider {
+    render() {
+        return "ok";
+    }
+}
+"""
+
+    def _broken_parser(_language: str):
+        raise TypeError("__init__() takes exactly 1 argument (2 given)")
+
+    monkeypatch.setattr("repolens.services.chunking.get_parser", _broken_parser)
+
+    chunks = chunker.chunk_text("src/providers/controlPanelProvider.ts", text, "typescript")
+
+    provider_chunk = next(chunk for chunk in chunks if chunk.symbol_name == "ControlPanelProvider")
+    assert provider_chunk.symbol_type == "class"
+    assert (provider_chunk.start_line, provider_chunk.end_line) == (1, 5)

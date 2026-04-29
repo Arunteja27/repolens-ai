@@ -4,9 +4,14 @@ steps:
       - build
       - -f
       - backend/Dockerfile
+      - --build-arg
+      - BACKEND_EXTRAS=${_BACKEND_EXTRAS}
       - -t
       - ${_IMAGE_URI}
       - .
 
 images:
   - ${_IMAGE_URI}
+
+substitutions:
+  _BACKEND_EXTRAS: ""

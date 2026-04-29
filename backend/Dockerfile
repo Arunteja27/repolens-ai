@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+ARG BACKEND_EXTRAS=""
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/backend
@@ -13,7 +15,7 @@ RUN apt-get update && \
 COPY backend /app/backend
 
 RUN python -m pip install --upgrade pip && \
-    python -m pip install --no-cache-dir -e /app/backend[full]
+    python -m pip install --no-cache-dir -e "/app/backend${BACKEND_EXTRAS}"
 
 EXPOSE 8000
 

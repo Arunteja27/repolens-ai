@@ -128,7 +128,10 @@ class SymbolAwareChunker:
             if python_chunks:
                 return python_chunks
         if get_parser is not None and language in TREE_SITTER_LANGUAGE_MAP:
-            tree_sitter_chunks = self._chunk_tree_sitter(file_path, text, language)
+            try:
+                tree_sitter_chunks = self._chunk_tree_sitter(file_path, text, language)
+            except Exception:  # pragma: no cover - defensive fallback for optional parser stack
+                tree_sitter_chunks = []
             if tree_sitter_chunks:
                 return tree_sitter_chunks
         if language in JAVASCRIPT_FAMILY:
