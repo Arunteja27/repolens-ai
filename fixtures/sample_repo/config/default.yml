@@ -1,0 +1,4 @@
+app_name: atlas-tasks
+default_retrieval_mode: hybrid
+metrics_enabled: true
+

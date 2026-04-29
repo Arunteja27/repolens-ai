@@ -1,0 +1,93 @@
+[
+  {
+    "question": "Where is the HTTP server bootstrapped?",
+    "expected_files": ["src/server.ts"],
+    "expected_answer_contains": ["Bootstraps the HTTP server"],
+    "must_not_contain": ["database migration"]
+  },
+  {
+    "question": "Which file attaches request logging middleware?",
+    "expected_files": ["src/server.ts"],
+    "expected_answer_contains": ["request logging middleware"],
+    "must_not_contain": ["background worker"]
+  },
+  {
+    "question": "Where is request latency logged for each API call?",
+    "expected_files": ["src/middleware/requestLogger.ts"],
+    "expected_answer_contains": ["logs request latency"],
+    "must_not_contain": ["cron schedule"]
+  },
+  {
+    "question": "Which file exposes the /questions endpoint?",
+    "expected_files": ["src/routes/questions.ts"],
+    "expected_answer_contains": ["/questions endpoint"],
+    "must_not_contain": ["GraphQL subscription"]
+  },
+  {
+    "question": "Where does the code clone a repository into a temp workspace?",
+    "expected_files": ["src/services/repoIndexer.ts"],
+    "expected_answer_contains": ["temp workspace"],
+    "must_not_contain": ["S3 bucket"]
+  },
+  {
+    "question": "Which file combines vector similarity and BM25?",
+    "expected_files": ["src/retrieval/hybridRetriever.ts"],
+    "expected_answer_contains": ["BM25 scores"],
+    "must_not_contain": ["exact match only"]
+  },
+  {
+    "question": "Where is reciprocal rank fusion mentioned?",
+    "expected_files": ["src/retrieval/hybridRetriever.ts"],
+    "expected_answer_contains": ["reciprocal rank fusion"],
+    "must_not_contain": ["PageRank"]
+  },
+  {
+    "question": "Which file builds the grounded answer prompt?",
+    "expected_files": ["src/llm/groundedAnswer.ts"],
+    "expected_answer_contains": ["grounded answer prompt"],
+    "must_not_contain": ["image captioning"]
+  },
+  {
+    "question": "Where are file and line citations forced?",
+    "expected_files": ["src/llm/groundedAnswer.ts"],
+    "expected_answer_contains": ["file/line citations"],
+    "must_not_contain": ["no citations required"]
+  },
+  {
+    "question": "Which file keeps Gemini optional by default?",
+    "expected_files": ["src/config.ts"],
+    "expected_answer_contains": ["Gemini optional by default"],
+    "must_not_contain": ["Gemini required"]
+  },
+  {
+    "question": "Where are retrieval recall and MRR evaluations run?",
+    "expected_files": ["src/eval/runEval.ts"],
+    "expected_answer_contains": ["retrieval recall", "MRR"],
+    "must_not_contain": ["billing report"]
+  },
+  {
+    "question": "Which file reuses embeddings by chunk hash?",
+    "expected_files": ["src/cache/embeddingCache.ts"],
+    "expected_answer_contains": ["chunk hash"],
+    "must_not_contain": ["full re-embed on every request"]
+  },
+  {
+    "question": "What is the default retrieval mode?",
+    "expected_files": ["config/default.yml"],
+    "expected_answer_contains": ["default_retrieval_mode: hybrid"],
+    "must_not_contain": ["default_retrieval_mode: vector"]
+  },
+  {
+    "question": "Where are metrics enabled in config?",
+    "expected_files": ["config/default.yml"],
+    "expected_answer_contains": ["metrics_enabled: true"],
+    "must_not_contain": ["metrics_enabled: false"]
+  },
+  {
+    "question": "Which README section mentions hybrid retrieval?",
+    "expected_files": ["README.md"],
+    "expected_answer_contains": ["Hybrid retrieval combines vector similarity and BM25 scoring."],
+    "must_not_contain": ["SQL migration plan"]
+  }
+]
+

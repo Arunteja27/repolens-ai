@@ -17,6 +17,13 @@ def _env_int(name: str, default: int) -> int:
     return int(raw) if raw is not None else default
 
 
+def _env_list(name: str, default: list[str]) -> list[str]:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 @dataclass(slots=True)
 class Settings:
     root_dir: Path
@@ -45,6 +52,9 @@ class Settings:
     log_level: str = "INFO"
     retrieval_candidate_multiplier: int = 3
     metrics_namespace: str = "repolens"
+    cors_allowed_origins: list[str] = field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
     supported_extensions: set[str] = field(
         default_factory=lambda: {
             ".py",
@@ -97,6 +107,10 @@ class Settings:
             default_top_k=_env_int("TOP_K", 6),
             enable_rerank=_env_bool("ENABLE_RERANK", False),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
+            cors_allowed_origins=_env_list(
+                "CORS_ALLOWED_ORIGINS",
+                ["http://localhost:5173", "http://127.0.0.1:5173"],
+            ),
         )
         settings.ensure_directories()
         return settings
@@ -116,4 +130,3 @@ class Settings:
         if not path.is_absolute():
             path = root_dir / path
         return path
-

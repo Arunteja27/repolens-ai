@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from repolens.api.routes import router as api_router
@@ -27,6 +28,14 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="RepoLens AI", version="0.1.0", lifespan=lifespan)
+    settings = Settings.from_env()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+    )
     app.include_router(api_router, prefix="/api")
 
     @app.middleware("http")
@@ -85,4 +94,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
