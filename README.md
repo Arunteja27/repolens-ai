@@ -144,6 +144,22 @@ The evaluation dashboard reports:
 - Average cost per query
 - Failure rate and failed items
 
+## Eval Snapshot
+
+Latest local free-mode run on the bundled sample fixture (`fixtures/sample_repo`) with:
+
+- `EMBEDDING_PROVIDER=hashing`
+- `VECTOR_STORE_PROVIDER=memory`
+- `ANSWER_PROVIDER=extractive`
+
+| Metric | Result |
+| --- | --- |
+| Recall@3 | `1.00` |
+| Recall@5 | `1.00` |
+| MRR | `1.00` |
+| p95 latency | `3 ms` |
+| Avg cost/query | `$0.0000` |
+
 ## Supported Files
 
 RepoLens currently indexes:
