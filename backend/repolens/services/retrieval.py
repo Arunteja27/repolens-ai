@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import re
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -10,6 +9,7 @@ from typing import Protocol
 
 from repolens.models import ChunkRecord, RetrievalMode, RetrievedChunk
 from repolens.services.embeddings import EmbeddingService
+from repolens.services.relevance import analyze_question, assess_chunk, tokenize
 from repolens.services.storage import MetadataStore
 from repolens.services.vector_store import VectorStore
 
@@ -17,14 +17,6 @@ try:
     from rank_bm25 import BM25Okapi
 except ImportError:  # pragma: no cover - optional dependency
     BM25Okapi = None
-
-
-TOKEN_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_./-]*")
-
-
-def tokenize(text: str) -> list[str]:
-    return TOKEN_PATTERN.findall(text.lower())
-
 
 @dataclass(slots=True)
 class RetrievalResult:
@@ -45,20 +37,20 @@ class HeuristicReranker:
     def rerank(
         self, question: str, chunks: list[RetrievedChunk], top_k: int
     ) -> list[RetrievedChunk]:
-        question_tokens = set(tokenize(question))
+        analysis = analyze_question(question)
         reranked: list[RetrievedChunk] = []
         for chunk in chunks:
-            chunk_tokens = set(tokenize(chunk.chunk_text))
-            overlap = len(question_tokens & chunk_tokens) / max(1, len(question_tokens))
+            assessment = assess_chunk(analysis, chunk, base_score=chunk.score)
             reranked.append(
                 chunk.model_copy(
                     update={
-                        "score": round((chunk.score * 0.75) + (overlap * 0.25), 6),
-                        "source": f"{chunk.source}+rerank",
+                        "score": assessment.score,
+                        "source": f"{chunk.source}+heuristic",
                     }
                 )
             )
-        return sorted(reranked, key=lambda item: item.score, reverse=True)[:top_k]
+        ranked = sorted(reranked, key=lambda item: item.score, reverse=True)
+        return RetrievalService._diversify_by_file(ranked, top_k=top_k)
 
 
 class CrossEncoderReranker:
@@ -123,6 +115,8 @@ class SimpleBM25:
 
 
 class RetrievalService:
+    MIN_CANDIDATE_POOL = 60
+
     def __init__(
         self,
         store: MetadataStore,
@@ -143,7 +137,7 @@ class RetrievalService:
         vector_duration = 0
         bm25_duration = 0
         rerank_duration = 0
-        candidates = max(top_k, top_k * self.candidate_multiplier)
+        candidates = max(top_k, top_k * self.candidate_multiplier, self.MIN_CANDIDATE_POOL)
 
         vector_results: list[RetrievedChunk] = []
         if mode in {"vector", "hybrid"}:
@@ -163,19 +157,21 @@ class RetrievalService:
             bm25_duration = int((time.perf_counter() - started_at) * 1000)
 
         if mode == "vector":
-            merged = vector_results[:top_k]
+            merged = vector_results[:candidates]
         elif mode == "bm25":
-            merged = bm25_results[:top_k]
+            merged = bm25_results[:candidates]
         else:
             merged = self._hybrid_fuse(
                 vector_results=vector_results,
                 bm25_results=bm25_results,
-            )[:top_k]
+            )[:candidates]
 
         if self.reranker is not None and merged:
             started_at = time.perf_counter()
             merged = self.reranker.rerank(question=question, chunks=merged, top_k=top_k)
             rerank_duration = int((time.perf_counter() - started_at) * 1000)
+        else:
+            merged = self._diversify_by_file(merged, top_k=top_k)
 
         return RetrievalResult(
             chunks=merged,
@@ -188,12 +184,7 @@ class RetrievalService:
         chunks = self.store.list_chunks(repo_id)
         if not chunks:
             return []
-        tokenized_corpus = [
-            tokenize(
-                f"{chunk.file_path} {chunk.symbol_name or ''} {chunk.chunk_text}"
-            )
-            for chunk in chunks
-        ]
+        tokenized_corpus = [self._bm25_document_tokens(chunk) for chunk in chunks]
         query_tokens = tokenize(question)
         if BM25Okapi is not None:
             scores = list(BM25Okapi(tokenized_corpus).get_scores(query_tokens))
@@ -215,15 +206,42 @@ class RetrievalService:
     ) -> list[RetrievedChunk]:
         combined: dict[str, RetrievedChunk] = {}
         scores: dict[str, float] = {}
-        for source_results in (vector_results, bm25_results):
+        vector_weight = 0.45 if self.embeddings.provider.provider_name == "hashing" else 0.8
+        for weight, source_results in (
+            (vector_weight, vector_results),
+            (1.0, bm25_results),
+        ):
             for rank, chunk in enumerate(source_results, start=1):
-                scores[chunk.id] = scores.get(chunk.id, 0.0) + (1 / (50 + rank))
+                scores[chunk.id] = scores.get(chunk.id, 0.0) + (weight / (40 + rank))
                 combined.setdefault(chunk.id, chunk)
         hydrated = [
             combined[chunk_id].model_copy(update={"score": score, "source": "hybrid"})
             for chunk_id, score in scores.items()
         ]
         return sorted(hydrated, key=lambda item: item.score, reverse=True)
+
+    @staticmethod
+    def _bm25_document_tokens(chunk: ChunkRecord) -> list[str]:
+        path_tokens = tokenize(chunk.file_path) * 3
+        symbol_tokens = tokenize(chunk.symbol_name or "") * 5
+        type_tokens = tokenize(chunk.symbol_type or "") * 2
+        text_tokens = tokenize(chunk.chunk_text)
+        return path_tokens + symbol_tokens + type_tokens + text_tokens
+
+    @staticmethod
+    def _diversify_by_file(
+        chunks: list[RetrievedChunk], *, top_k: int, max_chunks_per_file: int = 2
+    ) -> list[RetrievedChunk]:
+        kept: list[RetrievedChunk] = []
+        per_file_counts: Counter[str] = Counter()
+        for chunk in chunks:
+            if per_file_counts[chunk.file_path] >= max_chunks_per_file:
+                continue
+            kept.append(chunk)
+            per_file_counts[chunk.file_path] += 1
+            if len(kept) >= top_k:
+                break
+        return kept
 
     @staticmethod
     def _to_retrieved_chunk(chunk: ChunkRecord, score: float, source: str) -> RetrievedChunk:

@@ -1,4 +1,5 @@
 PYTHON := .venv/bin/python
+BACKEND_STAMP := .venv/.backend-installed
 
 PIP_FLAGS ?=
 
@@ -11,9 +12,13 @@ venv: .venv/bin/python
 
 setup: backend-install frontend-install
 
-backend-install: .venv/bin/python
+$(BACKEND_STAMP): .venv/bin/python backend/pyproject.toml
 	$(PYTHON) -m pip install $(PIP_FLAGS) setuptools wheel
-	$(PYTHON) -m pip install $(PIP_FLAGS) --no-build-isolation -e 'backend[dev]'
+	$(PYTHON) -m pip install $(PIP_FLAGS) --no-build-isolation -e 'backend[dev]' || \
+	$(PYTHON) -m pip install $(PIP_FLAGS) --ignore-installed --no-deps --no-build-isolation -e 'backend[dev]'
+	@touch $(BACKEND_STAMP)
+
+backend-install: $(BACKEND_STAMP)
 
 frontend-install:
 	npm --prefix frontend install

@@ -7,7 +7,7 @@ from pathlib import Path
 from statistics import mean
 from uuid import uuid4
 
-from repolens.models import EvalItemResult, EvalSample, EvalSummary
+from repolens.models import EvalItemResult, EvalSample, EvalSummary, RetrievalMode
 from repolens.services.query import QueryService
 from repolens.services.storage import MetadataStore
 
@@ -21,16 +21,17 @@ class EvaluationService:
         self,
         repo_id: str,
         eval_set_path: str,
-        retrieval_mode: str = "hybrid",
+        retrieval_mode: RetrievalMode = "hybrid",
         top_k: int = 5,
     ) -> EvalSummary:
         samples = load_eval_samples(Path(eval_set_path))
+        sample_by_question = {sample.question: sample for sample in samples}
         results: list[EvalItemResult] = []
         for index, sample in enumerate(samples, start=1):
             answer = self.query_service.query(
                 repo_id=repo_id,
                 question=sample.question,
-                retrieval_mode=retrieval_mode,  # type: ignore[arg-type]
+                retrieval_mode=retrieval_mode,
                 top_k=top_k,
                 request_id=f"eval-{repo_id}-{index}",
             )
@@ -71,12 +72,18 @@ class EvaluationService:
             )
 
         total_queries = len(results)
+        retrieval_results = [result for result in results if result.expected_files]
+        hallucination_items = [result for result in results if result.hallucination_flags]
         failed_items = [
             result
             for result in results
             if (result.expected_files and not result.retrieval_hit_at_5)
             or result.hallucination_flags
-            or (result.answer_contains_score < 1.0 and result.expected_files)
+            or (
+                result.answer_contains_score == 0.0
+                and bool(result.answer.strip())
+                and bool(sample_by_question[result.question].expected_answer_contains)
+            )
         ]
         summary = EvalSummary(
             eval_id=f"eval-{uuid4().hex[:10]}",
@@ -84,16 +91,18 @@ class EvaluationService:
             created_at=datetime.now(UTC),
             total_queries=total_queries,
             retrieval_recall_at_3=mean(
-                [1.0 if result.retrieval_hit_at_3 else 0.0 for result in results]
+                [1.0 if result.retrieval_hit_at_3 else 0.0 for result in retrieval_results]
             )
-            if results
+            if retrieval_results
             else 0.0,
             retrieval_recall_at_5=mean(
-                [1.0 if result.retrieval_hit_at_5 else 0.0 for result in results]
+                [1.0 if result.retrieval_hit_at_5 else 0.0 for result in retrieval_results]
             )
-            if results
+            if retrieval_results
             else 0.0,
-            mrr=mean([result.reciprocal_rank for result in results]) if results else 0.0,
+            mrr=mean([result.reciprocal_rank for result in retrieval_results])
+            if retrieval_results
+            else 0.0,
             answer_contains_score=mean([result.answer_contains_score for result in results])
             if results
             else 0.0,
@@ -101,6 +110,7 @@ class EvaluationService:
             if results
             else 0.0,
             hallucination_flags=sum(len(result.hallucination_flags) for result in results),
+            hallucination_rate=(len(hallucination_items) / total_queries) if total_queries else 0.0,
             average_latency_ms=mean([result.latency_ms for result in results]) if results else 0.0,
             p95_latency_ms=self._percentile([result.latency_ms for result in results], 95),
             average_cost_per_query=mean(

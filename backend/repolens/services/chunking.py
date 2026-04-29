@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +30,21 @@ TREE_SITTER_SYMBOL_TYPES = {
     "go": {"function_declaration", "method_declaration", "type_declaration"},
     "cpp": {"function_definition", "class_specifier", "struct_specifier"},
 }
+
+JAVASCRIPT_FAMILY = {"javascript", "jsx", "typescript", "tsx"}
+JS_CLASS_PATTERN = re.compile(
+    r"^\s*(?:export\s+default\s+|export\s+)?class\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+)
+JS_FUNCTION_PATTERN = re.compile(
+    r"^\s*(?:export\s+)?(?:async\s+)?function\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\("
+)
+JS_CONST_FUNCTION_PATTERN = re.compile(
+    r"^\s*(?:export\s+)?(?:const|let|var)\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[A-Za-z_][A-Za-z0-9_]*)\s*=>"
+)
+JS_METHOD_PATTERN = re.compile(
+    r"^\s*(?:public|private|protected)?\s*(?:static\s+)?(?:async\s+)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\("
+)
+JS_METHOD_EXCLUSIONS = {"catch", "constructor", "for", "if", "switch", "while"}
 
 
 @dataclass(slots=True)
@@ -115,6 +131,10 @@ class SymbolAwareChunker:
             tree_sitter_chunks = self._chunk_tree_sitter(file_path, text, language)
             if tree_sitter_chunks:
                 return tree_sitter_chunks
+        if language in JAVASCRIPT_FAMILY:
+            javascript_chunks = self._chunk_javascript_like_symbols(file_path, text, language)
+            if javascript_chunks:
+                return javascript_chunks
         return self.sliding.chunk_text(file_path=file_path, text=text, language=language)
 
     def _chunk_python_symbols(self, file_path: str, text: str) -> list[ChunkDraft]:
@@ -176,6 +196,62 @@ class SymbolAwareChunker:
             symbols=sorted(symbols, key=lambda item: (item[0], item[1])),
         )
 
+    def _chunk_javascript_like_symbols(
+        self, file_path: str, text: str, language: str
+    ) -> list[ChunkDraft]:
+        lines = text.splitlines()
+        symbols: list[tuple[int, int, str | None, str | None]] = []
+        class_regions: list[tuple[int, int]] = []
+
+        for index, line in enumerate(lines):
+            class_match = JS_CLASS_PATTERN.match(line)
+            if class_match is None:
+                continue
+            start_line = index + 1
+            end_line = self._find_block_end(lines, index)
+            symbols.append((start_line, end_line, class_match.group("name"), "class"))
+            class_regions.append((start_line, end_line))
+
+        for index, line in enumerate(lines):
+            current_line = index + 1
+            if any(start <= current_line <= end for start, end in class_regions):
+                method_match = JS_METHOD_PATTERN.match(line)
+                if method_match is not None:
+                    name = method_match.group("name")
+                    if name not in JS_METHOD_EXCLUSIONS:
+                        symbols.append(
+                            (
+                                current_line,
+                                self._find_block_end(lines, index),
+                                name,
+                                "method",
+                            )
+                        )
+                continue
+
+            function_match = JS_FUNCTION_PATTERN.match(
+                line
+            ) or JS_CONST_FUNCTION_PATTERN.match(line)
+            if function_match is None:
+                continue
+            symbols.append(
+                (
+                    current_line,
+                    self._find_block_end(lines, index),
+                    function_match.group("name"),
+                    "function",
+                )
+            )
+
+        if not symbols:
+            return []
+        return self._chunk_symbol_regions(
+            file_path=file_path,
+            lines=lines,
+            language=language,
+            symbols=sorted(symbols, key=lambda item: (item[0], item[1])),
+        )
+
     def _chunk_symbol_regions(
         self,
         file_path: str,
@@ -222,6 +298,20 @@ class SymbolAwareChunker:
         for chunk in chunks:
             deduped[(chunk.start_line, chunk.end_line, chunk.chunk_text)] = chunk
         return list(deduped.values())
+
+    @staticmethod
+    def _find_block_end(lines: list[str], start_index: int) -> int:
+        brace_depth = 0
+        saw_open_brace = False
+        for index in range(start_index, len(lines)):
+            line = lines[index]
+            if "{" in line:
+                saw_open_brace = True
+            brace_depth += line.count("{")
+            brace_depth -= line.count("}")
+            if saw_open_brace and brace_depth <= 0:
+                return index + 1
+        return len(lines)
 
 
 def infer_language(file_path: str) -> str:

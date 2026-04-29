@@ -128,6 +128,7 @@ class EvalSummary(BaseModel):
     answer_contains_score: float
     groundedness_score: float
     hallucination_flags: int
+    hallucination_rate: float
     average_latency_ms: float
     p95_latency_ms: float
     average_cost_per_query: float

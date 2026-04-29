@@ -7,7 +7,7 @@ from repolens.services.embeddings import EmbeddingService, HashingEmbeddingProvi
 from repolens.services.filtering import FileFilter
 from repolens.services.ingestion import IngestionService, RepositoryCloner
 from repolens.services.query import QueryService
-from repolens.services.retrieval import RetrievalService
+from repolens.services.retrieval import HeuristicReranker, RetrievalService
 from repolens.services.storage import MetadataStore
 from repolens.services.vector_store import InMemoryVectorStore
 
@@ -32,7 +32,13 @@ def test_end_to_end_fixture_index_and_query(tmp_path: Path) -> None:
         store=store,
         vector_store=vector_store,
     )
-    retrieval = RetrievalService(store=store, vector_store=vector_store, embeddings=embeddings)
+    retrieval = RetrievalService(
+        store=store,
+        vector_store=vector_store,
+        embeddings=embeddings,
+        reranker=HeuristicReranker(),
+        candidate_multiplier=6,
+    )
     query = QueryService(
         store=store,
         retrieval=retrieval,
@@ -43,7 +49,7 @@ def test_end_to_end_fixture_index_and_query(tmp_path: Path) -> None:
     indexed = ingestion.index_repository(str(fixture_repo), request_id="test")
     response = query.query(
         repo_id=indexed.repo_id,
-        question="Which file combines vector similarity and BM25?",
+        question="Which file defines the hybridRetrieve function?",
         retrieval_mode="hybrid",
         top_k=3,
         request_id="test-query",

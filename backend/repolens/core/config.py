@@ -47,10 +47,10 @@ class Settings:
     max_file_size_bytes: int = 200_000
     max_lockfile_size_bytes: int = 75_000
     default_top_k: int = 6
-    enable_rerank: bool = False
+    enable_rerank: bool = True
     prompt_version: str = "v1.0-grounded-json"
     log_level: str = "INFO"
-    retrieval_candidate_multiplier: int = 3
+    retrieval_candidate_multiplier: int = 6
     metrics_namespace: str = "repolens"
     cors_allowed_origins: list[str] = field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
@@ -105,7 +105,7 @@ class Settings:
             max_file_size_bytes=_env_int("MAX_FILE_SIZE_BYTES", 200_000),
             max_lockfile_size_bytes=_env_int("MAX_LOCKFILE_SIZE_BYTES", 75_000),
             default_top_k=_env_int("TOP_K", 6),
-            enable_rerank=_env_bool("ENABLE_RERANK", False),
+            enable_rerank=_env_bool("ENABLE_RERANK", True),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             cors_allowed_origins=_env_list(
                 "CORS_ALLOWED_ORIGINS",

@@ -9,6 +9,18 @@ from repolens.services.storage import MetadataStore
 class FakeQueryService:
     def query(self, repo_id: str, question: str, retrieval_mode: str, top_k: int, request_id: str):
         del repo_id, retrieval_mode, top_k, request_id
+        if "postgres schema" in question.lower():
+            return AnswerResponse(
+                answer="I don't know from the indexed repo.",
+                citations=[],
+                retrieved_chunks=[],
+                model_used="extractive-grounded",
+                prompt_version="test",
+                latency_ms=13,
+                estimated_cost_usd=0.0,
+                token_usage=None,
+                request_id="req-unknown",
+            )
         if "latency" in question.lower():
             file_path = "src/middleware/requestLogger.ts"
             answer = (
@@ -63,6 +75,12 @@ def test_eval_metrics_are_calculated(tmp_path: Path) -> None:
                     "expected_answer_contains": ["logs request latency"],
                     "must_not_contain": ["database migration"],
                 },
+                {
+                    "question": "Where is the Postgres schema defined?",
+                    "expected_files": [],
+                    "expected_answer_contains": ["I don't know from the indexed repo."],
+                    "must_not_contain": ["database migration"],
+                },
             ]
         ),
         encoding="utf-8",
@@ -73,4 +91,5 @@ def test_eval_metrics_are_calculated(tmp_path: Path) -> None:
     assert summary.retrieval_recall_at_5 == 1.0
     assert summary.mrr == 1.0
     assert summary.answer_contains_score == 1.0
+    assert summary.hallucination_rate == 0.0
     assert summary.failure_rate == 0.0

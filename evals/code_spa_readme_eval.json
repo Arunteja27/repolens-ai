@@ -36,11 +36,5 @@
     "expected_files": ["README.md"],
     "expected_answer_contains": ["Report Issues", "Feature Requests"],
     "must_not_contain": ["Jira"]
-  },
-  {
-    "question": "Where is the VS Code extension activation function implemented?",
-    "expected_files": ["README.md"],
-    "expected_answer_contains": ["I don't know from the indexed repo."],
-    "must_not_contain": ["src/extension.ts"]
   }
 ]

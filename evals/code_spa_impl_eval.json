@@ -1,0 +1,44 @@
+[
+  {
+    "question": "Which file defines activate(context: vscode.ExtensionContext)?",
+    "expected_files": ["src/core/extension.ts"],
+    "expected_answer_contains": ["src/core/extension.ts"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Which file defines the ControlPanelProvider class?",
+    "expected_files": ["src/providers/controlPanelProvider.ts"],
+    "expected_answer_contains": ["src/providers/controlPanelProvider.ts"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Where are Code Spa settings declared?",
+    "expected_files": ["package.json"],
+    "expected_answer_contains": ["package.json", "contributes.configuration.properties"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Where is Spotify integration implemented?",
+    "expected_files": ["src/services/spotify/spotifyService.ts", "src/services/music/musicPlayer.ts"],
+    "expected_answer_contains": ["src/services/spotify/spotifyService.ts"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Which file defines the GeminiService class?",
+    "expected_files": ["src/services/llm/geminiService.ts"],
+    "expected_answer_contains": ["src/services/llm/geminiService.ts"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Where is the dynamic background logic implemented?",
+    "expected_files": ["src/services/theming/backgroundController.ts"],
+    "expected_answer_contains": ["src/services/theming/backgroundController.ts"],
+    "must_not_contain": ["I don't know from the indexed repo."]
+  },
+  {
+    "question": "Where is the Postgres schema defined?",
+    "expected_files": [],
+    "expected_answer_contains": ["I don't know from the indexed repo."],
+    "must_not_contain": ["src/", "package.json"]
+  }
+]

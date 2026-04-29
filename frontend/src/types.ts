@@ -84,10 +84,10 @@ export interface EvalSummary {
   answer_contains_score: number;
   groundedness_score: number;
   hallucination_flags: number;
+  hallucination_rate: number;
   average_latency_ms: number;
   p95_latency_ms: number;
   average_cost_per_query: number;
   failure_rate: number;
   failed_items: EvalItemResult[];
 }
-

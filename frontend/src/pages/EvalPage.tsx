@@ -71,7 +71,15 @@ export function EvalPage() {
             <MetricCard label="Recall@3" value={formatPct(evalSummary.retrieval_recall_at_3)} />
             <MetricCard label="Recall@5" value={formatPct(evalSummary.retrieval_recall_at_5)} />
             <MetricCard label="MRR" value={evalSummary.mrr.toFixed(3)} />
+            <MetricCard
+              label="Answer match"
+              value={formatPct(evalSummary.answer_contains_score)}
+            />
             <MetricCard label="Groundedness" value={formatPct(evalSummary.groundedness_score)} />
+            <MetricCard
+              label="Hallucination rate"
+              value={formatPct(evalSummary.hallucination_rate)}
+            />
             <MetricCard
               label="Avg latency"
               value={`${Math.round(evalSummary.average_latency_ms)} ms`}
@@ -107,4 +115,3 @@ export function EvalPage() {
 function formatPct(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
-
