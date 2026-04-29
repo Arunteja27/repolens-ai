@@ -6,6 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY backend /app/backend
 
 RUN python -m pip install --upgrade pip && \
@@ -14,4 +18,3 @@ RUN python -m pip install --upgrade pip && \
 EXPOSE 8000
 
 CMD ["uvicorn", "repolens.main:app", "--app-dir", "/app/backend", "--host", "0.0.0.0", "--port", "8000"]
-

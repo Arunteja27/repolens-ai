@@ -58,7 +58,19 @@ class RepositoryCloner:
         if branch:
             command.extend(["--branch", branch])
         command.extend([repo_url, str(target)])
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)
+        except FileNotFoundError as exc:
+            shutil.rmtree(target, ignore_errors=True)
+            raise RuntimeError(
+                "Git is not installed in the RepoLens runtime, so remote repositories "
+                "cannot be cloned. Install git locally or include it in the deployment image."
+            ) from exc
+        except subprocess.CalledProcessError as exc:
+            shutil.rmtree(target, ignore_errors=True)
+            stderr = (exc.stderr or "").strip()
+            detail = stderr or "git clone failed."
+            raise RuntimeError(f"Failed to clone repository: {detail}") from exc
         commit_sha = self._resolve_commit_sha(target)
         return PreparedRepository(
             repo_path=target,
