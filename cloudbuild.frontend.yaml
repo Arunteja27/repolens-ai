@@ -4,14 +4,9 @@ steps:
       - build
       - -f
       - frontend/Dockerfile
-      - --build-arg
-      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
       - -t
       - ${_IMAGE_URI}
       - .
 
 images:
   - ${_IMAGE_URI}
-
-substitutions:
-  _VITE_API_BASE_URL: __MISSING_API_BASE_URL__

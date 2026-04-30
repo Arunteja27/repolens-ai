@@ -5,8 +5,10 @@ import type {
   RepoRecord,
   RetrievalMode,
 } from "./types";
+import { getRuntimeApiBaseUrl } from "./runtime-config";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE =
+  getRuntimeApiBaseUrl() ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;

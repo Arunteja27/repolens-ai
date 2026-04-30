@@ -129,18 +129,12 @@ https://repolens-backend-XXXXX-uc.a.run.app
 
 ## 5. Build and deploy the frontend
 
-Build the frontend image with the backend URL baked in:
-
-First confirm the backend URL is not blank:
-
-```bash
-echo "$BACKEND_URL"
-```
+Build the frontend image:
 
 ```bash
 gcloud builds submit \
   --config cloudbuild.frontend.yaml \
-  --substitutions=_IMAGE_URI=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/repolens/repolens-frontend,_VITE_API_BASE_URL=https://repolens-backend-XXXXX-uc.a.run.app .
+  --substitutions=_IMAGE_URI=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/repolens/repolens-frontend .
 ```
 
 Deploy the frontend:
@@ -155,7 +149,8 @@ gcloud run deploy repolens-frontend \
   --memory 256Mi \
   --concurrency 20 \
   --min-instances 0 \
-  --max-instances 1
+  --max-instances 1 \
+  --set-env-vars="API_BASE_URL=https://repolens-backend-XXXXX-uc.a.run.app"
 ```
 
 After deploy, save the frontend URL:
@@ -163,6 +158,8 @@ After deploy, save the frontend URL:
 ```text
 https://repolens-frontend-XXXXX-uc.a.run.app
 ```
+
+The frontend now reads the backend URL from a runtime-generated `/config.js` file, so changing the backend target only requires a frontend redeploy, not a rebuild.
 
 ## 6. Tighten backend CORS after the frontend exists
 
@@ -189,10 +186,12 @@ Backend:
 
 - `https://repolens-backend-XXXXX-uc.a.run.app/health`
 - `https://repolens-backend-XXXXX-uc.a.run.app/metrics`
+- `https://repolens-backend-XXXXX-uc.a.run.app/api/repos/index`
 
 Frontend:
 
 - open `https://repolens-frontend-XXXXX-uc.a.run.app`
+- open `https://repolens-frontend-XXXXX-uc.a.run.app/config.js`
 
 End-to-end smoke test:
 
