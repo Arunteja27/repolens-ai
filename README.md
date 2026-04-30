@@ -2,8 +2,8 @@
 
 [RepoLens AI](https://repolens-frontend-jbcqjymb5a-uc.a.run.app/) is a full-stack repository Q&A assistant. It indexes a GitHub repo, chunks and stores code with line numbers, retrieves relevant context with hybrid search, and answers questions with grounded citations.
 
-<video src="assets/repolens-demo.mp4" controls="controls" style="max-width: 100%;">
-</video>
+https://github.com/user-attachments/assets/0242a19d-c62e-45a4-bc37-43cd3ac7ad23
+
 
 ## Features
 
