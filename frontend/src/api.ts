@@ -9,17 +9,33 @@ import type {
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+      ...init,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Network request failed.";
+    throw new Error(`${message} Check that the backend is reachable.`);
+  }
 
   if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(errorPayload.detail ?? `Request failed with status ${response.status}`);
+    const responseText = await response.text();
+    let detail: string | undefined;
+    try {
+      const errorPayload = JSON.parse(responseText) as { detail?: string };
+      detail = errorPayload.detail;
+    } catch {
+      detail = responseText.trim() || undefined;
+    }
+    throw new Error(detail ?? `Request failed with status ${response.status}`);
   }
 
   return (await response.json()) as T;
@@ -66,4 +82,3 @@ export async function runEval(repoId: string, evalSetPath?: string): Promise<Eva
     }),
   });
 }
-

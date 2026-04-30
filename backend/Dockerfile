@@ -13,6 +13,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY backend /app/backend
+COPY evals /app/evals
 
 RUN python -m pip install --upgrade pip && \
     python -m pip install --no-cache-dir -e "/app/backend${BACKEND_EXTRAS}"
