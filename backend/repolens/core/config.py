@@ -53,12 +53,12 @@ class Settings:
     retrieval_candidate_multiplier: int = 6
     metrics_namespace: str = "repolens"
     rate_limit_enabled: bool = False
-    rate_limit_query_requests: int = 60
+    rate_limit_query_requests: int = 180
     rate_limit_query_window_seconds: int = 60
-    rate_limit_index_requests: int = 4
-    rate_limit_index_window_seconds: int = 3600
-    rate_limit_eval_requests: int = 12
-    rate_limit_eval_window_seconds: int = 3600
+    rate_limit_index_requests: int = 20
+    rate_limit_index_window_seconds: int = 600
+    rate_limit_eval_requests: int = 20
+    rate_limit_eval_window_seconds: int = 600
     cors_allowed_origins: list[str] = field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
@@ -118,17 +118,17 @@ class Settings:
                 "RATE_LIMIT_ENABLED",
                 os.getenv("K_SERVICE") is not None,
             ),
-            rate_limit_query_requests=_env_int("RATE_LIMIT_QUERY_REQUESTS", 60),
+            rate_limit_query_requests=_env_int("RATE_LIMIT_QUERY_REQUESTS", 180),
             rate_limit_query_window_seconds=_env_int(
                 "RATE_LIMIT_QUERY_WINDOW_SECONDS", 60
             ),
-            rate_limit_index_requests=_env_int("RATE_LIMIT_INDEX_REQUESTS", 4),
+            rate_limit_index_requests=_env_int("RATE_LIMIT_INDEX_REQUESTS", 20),
             rate_limit_index_window_seconds=_env_int(
-                "RATE_LIMIT_INDEX_WINDOW_SECONDS", 3600
+                "RATE_LIMIT_INDEX_WINDOW_SECONDS", 600
             ),
-            rate_limit_eval_requests=_env_int("RATE_LIMIT_EVAL_REQUESTS", 12),
+            rate_limit_eval_requests=_env_int("RATE_LIMIT_EVAL_REQUESTS", 20),
             rate_limit_eval_window_seconds=_env_int(
-                "RATE_LIMIT_EVAL_WINDOW_SECONDS", 3600
+                "RATE_LIMIT_EVAL_WINDOW_SECONDS", 600
             ),
             cors_allowed_origins=_env_list(
                 "CORS_ALLOWED_ORIGINS",

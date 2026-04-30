@@ -42,6 +42,8 @@ def test_rate_limiter_rejects_repeated_query_requests(monkeypatch, tmp_path) -> 
     assert third.headers["X-RateLimit-Policy"] == "query"
     assert third.headers["X-RateLimit-Remaining"] == "0"
     assert int(third.headers["Retry-After"]) >= 1
+    assert third.json()["policy"] == "query"
+    assert "Rate limit exceeded for query requests." in third.json()["detail"]
 
 
 def test_rate_limiter_uses_forwarded_ip_as_client_key(monkeypatch, tmp_path) -> None:
@@ -70,3 +72,29 @@ def test_rate_limiter_uses_forwarded_ip_as_client_key(monkeypatch, tmp_path) -> 
     assert first.status_code == 404
     assert limited.status_code == 429
     assert other_client.status_code == 404
+
+
+def test_rate_limited_response_keeps_cors_headers(monkeypatch, tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.rate_limit_query_requests = 1
+    settings.cors_allowed_origins = ["https://demo.example"]
+    monkeypatch.setattr(Settings, "from_env", classmethod(lambda cls: settings))
+    app = create_app()
+
+    payload = {
+        "repo_id": "missing-repo",
+        "question": "Where is the entrypoint?",
+        "retrieval_mode": "hybrid",
+        "top_k": 3,
+    }
+
+    with TestClient(app) as client:
+        headers = {
+            "X-Forwarded-For": "198.51.100.4",
+            "Origin": "https://demo.example",
+        }
+        client.post("/api/query", json=payload, headers=headers)
+        limited = client.post("/api/query", json=payload, headers=headers)
+
+    assert limited.status_code == 429
+    assert limited.headers["Access-Control-Allow-Origin"] == "https://demo.example"

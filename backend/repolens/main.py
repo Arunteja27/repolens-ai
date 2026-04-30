@@ -49,8 +49,9 @@ def create_app() -> FastAPI:
         if rate_limit_decision is not None and rate_limit_decision.retry_after_seconds > 0:
             response = JSONResponse(
                 status_code=429,
-                content={"detail": "Rate limit exceeded. Try again later."},
+                content=_rate_limit_payload(rate_limit_decision),
             )
+            _apply_cors_headers(request, response)
             _apply_rate_limit_headers(response, rate_limit_decision)
             duration_ms = int((time.perf_counter() - started_at) * 1000)
             response.headers["X-Request-ID"] = request_id
@@ -156,3 +157,28 @@ def _apply_rate_limit_headers(response: Response, decision: RateLimitDecision) -
     response.headers["X-RateLimit-Policy"] = decision.policy_name
     if decision.retry_after_seconds > 0:
         response.headers["Retry-After"] = str(decision.retry_after_seconds)
+
+
+def _apply_cors_headers(request: Request, response: Response) -> None:
+    context = request.app.state.context
+    origin = request.headers.get("Origin")
+    if not origin:
+        return
+    allowed_origins = context.settings.cors_allowed_origins
+    if "*" in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return
+    if origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+
+
+def _rate_limit_payload(decision: RateLimitDecision) -> dict[str, str | int]:
+    return {
+        "detail": (
+            f"Rate limit exceeded for {decision.policy_name} requests. "
+            f"Try again in {decision.retry_after_seconds} seconds."
+        ),
+        "policy": decision.policy_name,
+        "retry_after_seconds": decision.retry_after_seconds,
+    }

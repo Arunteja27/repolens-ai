@@ -110,7 +110,7 @@ gcloud run deploy repolens-backend \
   --min-instances 0 \
   --max-instances 1 \
   --timeout 900 \
-  --set-env-vars="EMBEDDING_PROVIDER=hashing,VECTOR_STORE_PROVIDER=memory,ANSWER_PROVIDER=extractive,RATE_LIMIT_ENABLED=true,RATE_LIMIT_QUERY_REQUESTS=60,RATE_LIMIT_QUERY_WINDOW_SECONDS=60,RATE_LIMIT_INDEX_REQUESTS=4,RATE_LIMIT_INDEX_WINDOW_SECONDS=3600,RATE_LIMIT_EVAL_REQUESTS=12,RATE_LIMIT_EVAL_WINDOW_SECONDS=3600,CORS_ALLOWED_ORIGINS=*"
+  --set-env-vars="EMBEDDING_PROVIDER=hashing,VECTOR_STORE_PROVIDER=memory,ANSWER_PROVIDER=extractive,RATE_LIMIT_ENABLED=true,RATE_LIMIT_QUERY_REQUESTS=180,RATE_LIMIT_QUERY_WINDOW_SECONDS=60,RATE_LIMIT_INDEX_REQUESTS=20,RATE_LIMIT_INDEX_WINDOW_SECONDS=600,RATE_LIMIT_EVAL_REQUESTS=20,RATE_LIMIT_EVAL_WINDOW_SECONDS=600,CORS_ALLOWED_ORIGINS=*"
 ```
 
 Why these settings:
@@ -118,7 +118,7 @@ Why these settings:
 - `max-instances=1`: keeps spend and storage behavior predictable
 - `concurrency=1`: only one request runs at a time, which is slower but safer for a personal app
 - `timeout=900`: indexing larger repos can take a while
-- `RATE_LIMIT_*`: built-in app-level throttling for the expensive endpoints
+- `RATE_LIMIT_*`: built-in app-level throttling that is relaxed enough for repeat demo runs
 - `CORS_ALLOWED_ORIGINS=*`: simplest first deploy; you can tighten this after the frontend URL is known
 
 After deploy, save the backend URL:
@@ -177,7 +177,7 @@ gcloud run deploy repolens-backend \
   --min-instances 0 \
   --max-instances 1 \
   --timeout 900 \
-  --set-env-vars="EMBEDDING_PROVIDER=hashing,VECTOR_STORE_PROVIDER=memory,ANSWER_PROVIDER=extractive,RATE_LIMIT_ENABLED=true,RATE_LIMIT_QUERY_REQUESTS=60,RATE_LIMIT_QUERY_WINDOW_SECONDS=60,RATE_LIMIT_INDEX_REQUESTS=4,RATE_LIMIT_INDEX_WINDOW_SECONDS=3600,RATE_LIMIT_EVAL_REQUESTS=12,RATE_LIMIT_EVAL_WINDOW_SECONDS=3600,CORS_ALLOWED_ORIGINS=https://repolens-frontend-XXXXX-uc.a.run.app"
+  --set-env-vars="EMBEDDING_PROVIDER=hashing,VECTOR_STORE_PROVIDER=memory,ANSWER_PROVIDER=extractive,RATE_LIMIT_ENABLED=true,RATE_LIMIT_QUERY_REQUESTS=180,RATE_LIMIT_QUERY_WINDOW_SECONDS=60,RATE_LIMIT_INDEX_REQUESTS=20,RATE_LIMIT_INDEX_WINDOW_SECONDS=600,RATE_LIMIT_EVAL_REQUESTS=20,RATE_LIMIT_EVAL_WINDOW_SECONDS=600,CORS_ALLOWED_ORIGINS=https://repolens-frontend-XXXXX-uc.a.run.app"
 ```
 
 ## 7. Verify the deployment
@@ -211,15 +211,17 @@ Cloud Run will autoscale, but it does not give you free built-in per-IP throttli
 
 For this personal deployment, RepoLens now includes an in-memory backend rate limiter:
 
-- `/api/query`: `60 requests / minute / IP`
-- `/api/repos/index`: `4 requests / hour / IP`
-- `/api/evals/run`: `12 requests / hour / IP`
+- `/api/query`: `180 requests / minute / IP`
+- `/api/repos/index`: `20 requests / 10 minutes / IP`
+- `/api/evals/run`: `20 requests / 10 minutes / IP`
 
 This is intentionally simple and cheap:
 
 - it works best with `max-instances=1`
 - it is per instance, not globally shared across multiple instances
 - it is enough for a personal demo without adding Cloud Armor
+
+If you are the only user and want the smoothest recording/demo experience, you can disable the limiter entirely by changing `RATE_LIMIT_ENABLED=true` to `RATE_LIMIT_ENABLED=false` in the backend deploy command.
 
 ## 9. Why not custom domains yet
 
