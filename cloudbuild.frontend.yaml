@@ -14,4 +14,4 @@ images:
   - ${_IMAGE_URI}
 
 substitutions:
-  _VITE_API_BASE_URL: http://localhost:8000
+  _VITE_API_BASE_URL: __MISSING_API_BASE_URL__

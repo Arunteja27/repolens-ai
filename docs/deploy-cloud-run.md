@@ -131,6 +131,12 @@ https://repolens-backend-XXXXX-uc.a.run.app
 
 Build the frontend image with the backend URL baked in:
 
+First confirm the backend URL is not blank:
+
+```bash
+echo "$BACKEND_URL"
+```
+
 ```bash
 gcloud builds submit \
   --config cloudbuild.frontend.yaml \
